@@ -25,8 +25,14 @@ RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | gpg --dearm
 
 WORKDIR /app
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Pega o executável do uv diretamente da imagem oficial
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
+
+# Copia os arquivos de dependência do uv
+COPY pyproject.toml uv.lock ./
+
+# Sincroniza e instala todas as dependências no Python do sistema
+RUN uv pip install --system -r pyproject.toml
 
 # Instala dependências de SO exigidas pelo Playwright
 RUN playwright install-deps
@@ -35,5 +41,5 @@ COPY . .
 
 EXPOSE 8000
 
-# Roda o Uvicorn dentro do display virtual Xvfb
+# Executa o Uvicorn sob o display virtual Xvfb
 CMD ["xvfb-run", "--auto-servernum", "--server-args=-screen 0 1920x1080x24", "uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000"]
