@@ -1,42 +1,30 @@
-FROM python:3.11-slim
+# 1. Imagem base oficial do Playwright com Python sobre Ubuntu
+FROM mcr.microsoft.com/playwright/python:v1.49.0-noble
 
+# 2. Copia os binários do uv direto da imagem oficial
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+# 3. Variáveis de ambiente essenciais
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
-
-# Instala ferramentas do sistema, Xvfb e bibliotecas gráficas
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    wget \
-    gnupg \
-    xvfb \
-    ca-certificates \
-    curl \
-    fonts-liberation \
-    libasound2 \
-    libnss3 \
-    libxss1 \
-    && rm -rf /var/lib/apt/lists/*
-
-# Instala o Google Chrome oficial
-RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | gpg --dearmor -o /usr/share/keyrings/google-chrome.gpg \
-    && echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome.gpg] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list \
-    && apt-get update \
-    && apt-get install -y google-chrome-stable --no-install-recommends \
-    && rm -rf /var/lib/apt/lists/*
+ENV UV_SYSTEM_PYTHON=1
 
 WORKDIR /app
 
-# Pega o executável do uv
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
+# 4. Instala o Xvfb (display virtual para simular monitor e rodar headless=False)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    xvfb \
+    && rm -rf /var/lib/apt/lists/*
 
-# Instala as bibliotecas exatas do projeto
-RUN uv pip install --system fastapi "uvicorn[standard]" playwright
+# 5. Copia e instala as dependências Python usando o UV
+COPY requirements.txt .
+RUN uv pip install -r requirements.txt
 
-# Instala dependências de SO do Playwright
-RUN playwright install-deps
+# 6. Garante que os navegadores do Playwright estejam prontos
+RUN playwright install chromium
 
+# 7. Copia o código da aplicação
 COPY . .
 
-EXPOSE 8000
-
-# Executa sob o display virtual Xvfb
-CMD ["xvfb-run", "--auto-servernum", "--server-args=-screen 0 1920x1080x24", "uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000"]
+# 8. Executa o loop via xvfb-run (resolução Full HD simulada)
+CMD ["xvfb-run", "--auto-servernum", "--server-args=-screen 0 1920x1080x24", "python", "main.py"]
