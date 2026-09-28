@@ -8,10 +8,12 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
 ENV UV_SYSTEM_PYTHON=1
+# FIXA A TELA GRÁFICA VIRTUAL
+ENV DISPLAY=:99
 
 WORKDIR /app
 
-# 4. Instala o Xvfb (display virtual para simular monitor e rodar headless=False)
+# 4. Instala o Xvfb
 RUN apt-get update && apt-get install -y --no-install-recommends \
     xvfb \
     && rm -rf /var/lib/apt/lists/*
@@ -26,5 +28,5 @@ RUN playwright install chromium
 # 7. Copia o código da aplicação
 COPY . .
 
-# 8. Executa o loop via xvfb-run (resolução Full HD simulada)
-CMD ["xvfb-run", "--auto-servernum", "--server-args=-screen 0 1920x1080x24", "python", "main.py"]
+# 8. Inicia o servidor Xvfb no display :99 em background e roda o Python sem buffer (-u)
+CMD ["sh", "-c", "Xvfb :99 -screen 0 1920x1080x24 -ac & python -u main.py"]
