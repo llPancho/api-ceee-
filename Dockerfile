@@ -8,14 +8,14 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
 ENV UV_SYSTEM_PYTHON=1
-# FIXA A TELA GRÁFICA VIRTUAL
 ENV DISPLAY=:99
 
 WORKDIR /app
 
-# 4. Instala o Xvfb
+# 4. Instala o Xvfb e procps (para killall/ps)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     xvfb \
+    psmisc \
     && rm -rf /var/lib/apt/lists/*
 
 # 5. Copia e instala as dependências Python usando o UV
@@ -28,5 +28,5 @@ RUN playwright install chromium
 # 7. Copia o código da aplicação
 COPY . .
 
-# 8. Inicia o servidor Xvfb no display :99 em background e roda o Python sem buffer (-u)
-CMD ["sh", "-c", "Xvfb :99 -screen 0 1920x1080x24 -ac & python -u main.py"]
+# 8. Inicia o Xvfb com controle de acesso desativado (-ac) e roda o Python
+CMD ["sh", "-c", "Xvfb :99 -screen 0 1920x1080x24 -ac & sleep 1 && python -u main.py"]
