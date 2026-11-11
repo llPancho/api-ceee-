@@ -31,4 +31,4 @@ COPY . .
 # 8. Executa via xvfb-run:
 # - -a: aloca automaticamente um display livre (evita conflito com :99 e locks residuais)
 # - --server-args: desativa controle de acesso (-ac) e suprime logs do servidor X (2>/dev/null)
-CMD ["sh", "-c", "xvfb-run -a --server-args='-screen 0 1920x1080x24 -ac' python -u main.py 2> >(grep -v -E 'xkbcomp|XF86|Could not resolve keysym' >&2)"]
+CMD ["bash", "-c", "xvfb-run -a --server-args='-screen 0 1920x1080x24 -ac' python -u main.py 2> >(grep -v -E 'xkbcomp|XF86|Could not resolve keysym' >&2)"]

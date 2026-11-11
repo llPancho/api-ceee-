@@ -1,4 +1,5 @@
 .env
+webeditor.md
 .venv/
 .venv-wsl/
 __pycache__/

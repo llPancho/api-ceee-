@@ -1,0 +1,8 @@
+services:
+  api:
+    build: .
+    container_name: api-ceee
+    restart: always
+    shm_size: '1gb'
+    environment:
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
