@@ -1,13 +1,18 @@
 import base64
-import datetime
+from datetime import datetime
 import json
 import os
 import time
 import requests
 from dotenv import load_dotenv
 from playwright.sync_api import sync_playwright
-
 load_dotenv()
+from datetime import datetime, timezone, timedelta
+
+# Fuso horário fixo de Brasília (UTC-3)
+TZ_BRASILIA = timezone(timedelta(hours=-3))
+
+
 
 # ================= CONFIGURAÇÕES =================
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
@@ -16,6 +21,11 @@ CAMINHO_NO_REPO = "dados/dados_ceee.json"
 BRANCH = "main"
 INTERVALO_SEGUNDOS = 15 * 60  # 15 minutos
 # =================================================
+
+def agora_brasilia(formato="%Y-%m-%d %H:%M:%S") -> str:
+    """Retorna o timestamp atual formatado no horário de Brasília."""
+    return datetime.now(TZ_BRASILIA).strftime(formato)
+
 
 def salvar_ou_substituir_no_github(dados):
     if not GITHUB_TOKEN:
@@ -36,7 +46,7 @@ def salvar_ou_substituir_no_github(dados):
         info_arquivo = res_get.json()
         sha = info_arquivo.get("sha")
         
-        # Opcional: Evita commit se o conteúdo for rigorosamente o mesmo
+        # Evita commit desnecessário se o conteúdo for idêntico
         conteudo_antigo = base64.b64decode(info_arquivo.get("content", "")).decode("utf-8")
         if conteudo_antigo.strip() == conteudo_novo_json.strip():
             print("ℹ️ Dados idênticos aos anteriores. Nenhum commit necessário.")
@@ -48,8 +58,8 @@ def salvar_ou_substituir_no_github(dados):
     # 2. Converte para Base64
     conteudo_base64 = base64.b64encode(conteudo_novo_json.encode("utf-8")).decode("utf-8")
 
-    # 3. Monta o payload do commit com timestamp
-    agora = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    # 3. Monta o payload do commit com timestamp no horário de Brasília
+    agora = agora_brasilia("%Y-%m-%d %H:%M:%S")
     payload = {
         "message": f"Atualização automática CEEE - {agora}",
         "content": conteudo_base64,
@@ -61,13 +71,13 @@ def salvar_ou_substituir_no_github(dados):
     # 4. Envia o commit via PUT
     res_put = requests.put(url, headers=headers, json=payload)
     if res_put.status_code in [200, 201]:
-        print(f" Sucesso! Commit realizado às {agora}.")
+        print(f" Sucesso! Commit realizado às {agora} (Horário de Brasília).")
     else:
         print(f"❌ Erro ao commitar no GitHub ({res_put.status_code}): {res_put.text}")
 
 
 def extrair_dados_ceee():
-    print(f"\n[{datetime.datetime.now().strftime('%H:%M:%S')}] Iniciando captura...")
+    print(f"\n[{agora_brasilia('%H:%M:%S')}] Iniciando captura...")
     with sync_playwright() as p:
         browser = p.chromium.launch(
             headless=False,
@@ -81,7 +91,8 @@ def extrair_dados_ceee():
 
         context = browser.new_context(
             no_viewport=True,
-            locale="pt-BR"
+            locale="pt-BR",
+            timezone_id="America/Sao_Paulo"  # Define também o fuso no navegador do Playwright
         )
 
         page = context.new_page()
@@ -116,9 +127,9 @@ def main():
         except Exception as e:
             print(f"❌ Ocorreu um erro no ciclo atual: {e}")
         
-        print(f" Aguardando 15 minutos para a próxima checagem...")
+        print(" Aguardando 15 minutos para a próxima checagem...")
         time.sleep(INTERVALO_SEGUNDOS)
- 
+
 
 if __name__ == "__main__":
     main()
