@@ -12,21 +12,22 @@ ENV DISPLAY=:99
 
 WORKDIR /app
 
-# 4. Instala o Xvfb e procps (para killall/ps)
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# 4. Instala o Xvfb e utilitários de processo com tolerância a falha de rede
+RUN (apt-get update --fix-missing || apt-get update) && apt-get install -y --no-install-recommends \
     xvfb \
     psmisc \
+    procps \
     && rm -rf /var/lib/apt/lists/*
 
 # 5. Copia e instala as dependências Python usando o UV
 COPY requirements.txt .
 RUN uv pip install -r requirements.txt
 
-# 6. Garante que os navegadores do Playwright estejam prontos
+# 6. Garante o binário do Chromium
 RUN playwright install chromium
 
 # 7. Copia o código da aplicação
 COPY . .
 
-# 8. Inicia o Xvfb com controle de acesso desativado (-ac) e roda o Python
-CMD ["sh", "-c", "Xvfb :99 -screen 0 1920x1080x24 -ac & sleep 1 && python -u main.py"]
+# 8. Inicia o Xvfb silenciando warnings de teclado (xkbcomp) e inicia a aplicação
+CMD ["sh", "-c", "Xvfb :99 -screen 0 1920x1080x24 -ac 2>/dev/null & sleep 1 && python -u main.py"]
